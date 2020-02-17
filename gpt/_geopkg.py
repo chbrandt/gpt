@@ -23,7 +23,7 @@ from .log import *
 #         return data
 
 
-class Geopkg(collections.UserDict, _base.GeopkgBase):
+class Geopkg(_base.GeopkgBase):
     """
     Data:
      - _tempdir [None] temporary directory if needed for data caching
@@ -61,28 +61,12 @@ class Geopkg(collections.UserDict, _base.GeopkgBase):
         except:
             pass
 
-    def __getattr__(self, name):
-        return self[name]
-
-    def __setattr__(self, name, value):
-        self[name] = value
-
-    def __delattr__(self, name):
-        del self[name]
-
-    def list(self, sort=True):
-        layers = self.data.keys()
-        if sort:
-            layers = sorted(layers)
-        return list(layers)
-
-    @property
-    def list(self):
-        return self.list(sort=True)
+    def items(self):
+        return self.data.items()
 
     @property
     def info(self):
-        for k,v in self.data.items():
+        for k,v in self.items():
             print("{!s}:".format(k))
             print("\tCRS:{!s}".format(v.crs))
             print()
@@ -98,10 +82,7 @@ class Geopkg(collections.UserDict, _base.GeopkgBase):
     def _read_gpkg(self, filename):
         assert all(a in self._tempdir for a in ['path','generated'])
         tempdir = self._tempdir
-        # check if filename is url/local
         if utils.is_url(filename):
-            # if file is remote/url, we have to cache in a temp dir
-            # download (remote) file to (local) temp directory
             try:
                 local_filename = utils.download(filename, dst=tempdir['path'])
             except:
@@ -109,7 +90,6 @@ class Geopkg(collections.UserDict, _base.GeopkgBase):
                 raise
         else:
             local_filename = filename
-        # open it
         data = utils.read_gpkg(local_filename, layers='all')
         return data
 
