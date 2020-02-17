@@ -19,18 +19,26 @@ class GeopkgBase(object):
         self.data[name] = value
 
     def list(self, sort=True):
+        """
+        Return list of layer names
+
+        Input:
+        - sort : bool
+            If True, return a sorted (ascending) list
+        """
         layers = self.data.keys()
         if sort:
             layers = sorted(layers)
         return list(layers)
 
-    def write_file(self, filename, overwrite=False):
+    def to_gpkg(self, filename, overwrite=False):
         """Write to geopackage"""
-        self.do_write(filename)
+        self._do_write(filename)
 
-    def do_write(self, filename):
+    def _do_write(self, filename, layers=None):
         """Write to file, overwritting if already there"""
         for name,gdf in self.data.items():
-            gdf.to_file(filename,
-                        driver='GPKG',
-                        layer=name)
+            if layers is None or name in layers:
+                gdf.to_file(filename,
+                            driver='GPKG',
+                            layer=name)

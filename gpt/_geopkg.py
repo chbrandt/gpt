@@ -61,19 +61,14 @@ class Geopkg(_base.GeopkgBase):
         except:
             pass
 
-    def items(self):
+    def layers(self):
         return self.data.items()
 
-    @property
     def info(self):
-        for k,v in self.items():
+        for k,v in self.layers():
             print("{!s}:".format(k))
             print("\tCRS:{!s}".format(v.crs))
             print()
-
-    @staticmethod
-    def read_file(filename):
-        return Geopkg(file=filename)
 
     def rename_layer(self, name_old, name_new):
         self.data[name_new] = self.data[name_old]
@@ -103,7 +98,3 @@ class Geopkg(_base.GeopkgBase):
             # os.path.exists() and os.path.isdir()
             if self._tempdir['generated']:
                 utils.remove_dir(self._tempdir['path'])
-
-
-# def _define_tempdir(path, generated=False):
-#     return dict(path=path, generated=generated)
