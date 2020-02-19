@@ -1,6 +1,16 @@
 def _nie():
     raise NotImplementedError
 
+def _tout(s):
+    return "{!s}\n".format(s)
+
+def _tout_df(gdf):
+    from pandas import option_context
+    with option_context('display.max_rows', 6,
+                        'display.max_columns', 0):
+        out = str(gdf)
+    return _tout(out)
+
 
 class GeopkgBase(object):
     def __init__(self, data):
@@ -19,9 +29,16 @@ class GeopkgBase(object):
         self.data[name] = value
 
     def __str__(self):
-        for k, v in self.data.items():
-            print(k)
-            print(v)
+        out = ""
+        for lyr, gdf in self.data.items():
+            out += _tout(lyr)
+            out += _tout("-" * len(lyr))
+            if len(gdf) > 10:
+                out += _tout_df(gdf)
+            else:
+                out += _tout_df(gdf)
+            out += "\n"
+        return out
 
     def __contains__(self, name):
         return name in self.data
