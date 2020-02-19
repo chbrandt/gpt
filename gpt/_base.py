@@ -18,6 +18,14 @@ class GeopkgBase(object):
     def __setitem__(self, name, value):
         self.data[name] = value
 
+    def __str__(self):
+        for k, v in self.data.items():
+            print(k)
+            print(v)
+
+    def __contains__(self, name):
+        return name in self.data
+
     def list(self, sort=True):
         """
         Return list of layer names
@@ -37,7 +45,7 @@ class GeopkgBase(object):
 
     def _do_write(self, filename, layers=None):
         """Write to file, overwritting if already there"""
-        for name,gdf in self.data.items():
+        for name, gdf in self.data.items():
             if layers is None or name in layers:
                 gdf.to_file(filename,
                             driver='GPKG',
