@@ -17,7 +17,8 @@ def _ensure_just_one_default_style(styles, layer_name):
     defaults = list(styles.loc[ ids, "useAsDefault"]) # the default flag for these rows
     
     if len(ids) == 0:
-        log.error("no style for this layer found")
+        #log.error("no style for this layer found")
+        print("no style for this layer found")
         return
     
     if len(ids) == 1:
@@ -28,7 +29,8 @@ def _ensure_just_one_default_style(styles, layer_name):
             first_default  = defaults.index(True)
             id = ids[first_default]
         except: # no style set as default
-            log.warning("No styles with default flag. using as style the last inserted. may be a problem!")
+            #log.warning("No styles with default flag. using as style the last inserted. may be a problem!")
+            print("No styles with default flag. using as style the last inserted. may be a problem!")
             id = ids[-1] # chose the last inserted
     
     styles.loc[ids, "useAsDefault"] = False # clear default flags, just to be sure, we may actually want to delete those unused styles
@@ -117,7 +119,8 @@ class Geopkg(_base.GeopkgBase):
                 newstyle = str(ET.tostring(tree, encoding='unicode', method='xml'))
                 styles.loc[id,"styleQML"] = newstyle
             else: # nothing to do - not affected
-                log.debug("the field were not used as filter for the style")
+                #log.debug("the field were not used as filter for the style")
+                print("the field were not used as filter for the style")
                 return self
     
             # clear this because we cannot grant 1 to 1 with qml for now
