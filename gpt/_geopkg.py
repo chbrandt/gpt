@@ -11,18 +11,6 @@ from . import utils
 from .log import *
 
 
-# class utils:
-#     @staticmethod
-#     def read_geopackage(filename):
-#         layers = fiona.listlayers(filename)
-#         data = {}
-#         for layer in layers:
-#             data[layer] = geopandas.read_file(filename,
-#                                               driver='GPKG',
-#                                               layer=layer)
-#         return data
-
-
 class Geopkg(_base.GeopkgBase):
     """
     Data:
@@ -70,9 +58,14 @@ class Geopkg(_base.GeopkgBase):
             print("\tCRS:{!s}".format(v.crs))
             print()
 
+    def _fix_style_layer_name_changed(self:_base.GeopkgBase, oldname, newname):
+        styles = self["layer_styles"]
+        styles.loc[styles["f_table_name"] == oldname, "f_table_name"] = newname
+
     def rename_layer(self, name_old, name_new):
         self.data[name_new] = self.data[name_old]
         del self.data[name_old]
+        self._fix_style_layer_name_changed(name_old, name_new)
 
     def _read_gpkg(self, filename):
         assert all(a in self._tempdir for a in ['path','generated'])

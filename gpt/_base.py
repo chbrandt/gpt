@@ -64,6 +64,11 @@ class GeopkgBase(object):
         """Write to file, overwritting if already there"""
         for name, gdf in self.data.items():
             if layers is None or name in layers:
-                gdf.to_file(filename,
-                            driver='GPKG',
-                            layer=name)
+                try:
+                    gdf.to_file(filename,
+                                driver='GPKG',
+                                layer=name)
+                except Exception as err:
+                    print('Error writing layer', name)
+                    raise err
+
