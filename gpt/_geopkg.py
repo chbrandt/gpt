@@ -11,7 +11,7 @@ from . import utils
 from .log import *
 
 
-def _ensure_just_one_default_style(style_table, layer_name):
+def _ensure_just_one_default_style(styles, layer_name):
     """perform some checks on the style table and clean if possible"""
     ids = list(styles.loc[styles["f_table_name"] == layer_name].index) # ids of the possible style for this layer
     defaults = list(styles.loc[ ids, "useAsDefault"]) # the default flag for these rows
