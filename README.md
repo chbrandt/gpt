@@ -1,4 +1,4 @@
-# Geo-P Tools
+# Geo-Planetary Tools
 
 > This is under development
 
