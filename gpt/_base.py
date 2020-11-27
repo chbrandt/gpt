@@ -43,6 +43,9 @@ class GeopkgBase(object):
     def __contains__(self, name):
         return name in self.data
 
+    def __len__(self):
+        return len(self.data)
+
     def list(self, sort=True):
         """
         Return list of layer names
@@ -71,4 +74,3 @@ class GeopkgBase(object):
                 except Exception as err:
                     print('Error writing layer', name)
                     raise err
-
