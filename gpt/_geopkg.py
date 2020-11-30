@@ -1,4 +1,5 @@
 import os
+import sys
 
 from . import _base
 from . import utils
@@ -38,7 +39,7 @@ class Geopkg(_base.GeopkgBase):
         try:
             self._remove_tempdir()
         except Exception as err:
-            logerr("{!s}".format(err))
+            print("{!s}".format(err), file=sys.stderr)
         try:
             super().__del__()
         except:
@@ -85,8 +86,8 @@ class Geopkg(_base.GeopkgBase):
             newstyle = fix_sld_style_on_field_name_change(sld, old_field_name, new_field_name)
             styles.loc[id, "styleSLD"] = newstyle
             return self
-    
-   
+
+
     def _read_gpkg(self, filename):
         assert all(a in self._tempdir for a in ['path','generated'])
         tempdir = self._tempdir
