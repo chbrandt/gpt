@@ -43,6 +43,15 @@ class GeopkgBase(object):
     def __contains__(self, name):
         return name in self.data
 
+    def items(self):
+        return self.data.items()
+
+    def keys(self):
+        return self.data.keys()
+
+    def values(self):
+        return self.data.values()
+
     def list(self, sort=True):
         """
         Return list of layer names
@@ -51,14 +60,18 @@ class GeopkgBase(object):
         - sort : bool
             If True, return a sorted (ascending) list
         """
-        layers = self.data.keys()
+        keys = self.keys()
         if sort:
-            layers = sorted(layers)
-        return list(layers)
+            keys = sorted(keys)
+        return list(keys)
 
     def to_gpkg(self, filename, overwrite=False):
         """Write to geopackage"""
         self._do_write(filename)
+
+    def to_json(self):
+        """Dump a json"""
+        return {name:df.to_dict() for name,df in self.items() }
 
     def _do_write(self, filename, layers=None):
         """Write to file, overwritting if already there"""
@@ -71,4 +84,3 @@ class GeopkgBase(object):
                 except Exception as err:
                     print('Error writing layer', name)
                     raise err
-

@@ -1,9 +1,12 @@
 import os
+import sys
 
 from . import _base
 from . import utils
 from .log import *
-from .styling import fix_qml_style_on_field_name_change, fix_sld_style_on_field_name_change, ensure_just_one_default_style
+from .styling import (fix_qml_style_on_field_name_change,
+                      fix_sld_style_on_field_name_change,
+                      ensure_just_one_default_style)
 
 
 class Geopkg(_base.GeopkgBase):
@@ -38,14 +41,23 @@ class Geopkg(_base.GeopkgBase):
         try:
             self._remove_tempdir()
         except Exception as err:
-            logerr("{!s}".format(err))
+            print("{!s}".format(err), file=sys.stderr)
         try:
             super().__del__()
         except:
             pass
 
+    # @property
+    # def layer_names(self):
+    #     return tuple(self.keys())
+
+    # @property
+    # def layer_tables(self):
+    #     return tuple(self.values())
+
+    @property
     def layers(self):
-        return self.data.items()
+        return self.items()
 
     def info(self):
         for k,v in self.layers():
@@ -58,6 +70,8 @@ class Geopkg(_base.GeopkgBase):
         styles.loc[styles["f_table_name"] == oldname, "f_table_name"] = newname
 
     def rename_layer(self, name_old, name_new):
+        # TODO: remove reference to 'data'; this class doesn't know about 'data'
+        #
         self.data[name_new] = self.data[name_old]
         del self.data[name_old]
         self._fix_style_layer_name_changed(name_old, name_new)
@@ -85,8 +99,8 @@ class Geopkg(_base.GeopkgBase):
             newstyle = fix_sld_style_on_field_name_change(sld, old_field_name, new_field_name)
             styles.loc[id, "styleSLD"] = newstyle
             return self
-    
-   
+
+
     def _read_gpkg(self, filename):
         assert all(a in self._tempdir for a in ['path','generated'])
         tempdir = self._tempdir
