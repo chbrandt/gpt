@@ -78,7 +78,7 @@ class GeopkgBase(object):
 
     def to_json(self):
         """Dump a json"""
-        return {name:df.json() for name,df in self.items() }
+        return {name:df.to_json() for name,df in self.items() }
 
     def _do_write(self, filename, layers=None):
         """Write to file, overwritting if already there"""
