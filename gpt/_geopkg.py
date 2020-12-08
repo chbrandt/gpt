@@ -3,7 +3,7 @@ import sys
 
 from . import _base
 from . import utils
-from .log import *
+# from .log import *
 from .styling import (fix_qml_style_on_field_name_change,
                       fix_sld_style_on_field_name_change,
                       ensure_just_one_default_style)

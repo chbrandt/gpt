@@ -30,7 +30,7 @@ class GeopkgBase(object):
 
     def __str__(self):
         out = ""
-        for lyr, gdf in self.data.items():
+        for lyr, gdf in self.items():
             out += _tout(lyr)
             out += _tout("-" * len(lyr))
             if len(gdf) > 10:
@@ -39,6 +39,9 @@ class GeopkgBase(object):
                 out += _tout_df(gdf)
             out += "\n"
         return out
+
+    def __repr__(self):
+        return str(self.items())
 
     def __contains__(self, name):
         return name in self.data
