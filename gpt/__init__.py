@@ -1,11 +1,10 @@
-from ._geopkg import Geopkg
+from .geopkg import Geopkg
 
 
-def load_gpkg(filename):
+def read_gpkg(filename):
     """
-    Load data from geopackage in 'filename'
+    Return Geopkg from geopackage 'filename'
     """
     return Geopkg(file=filename)
 
-read_file = load_gpkg
-read_geopackage = load_gpkg
+load_geopackage = read_gpkg
