@@ -1,8 +1,14 @@
 """
 Geo-P Tools - utilities for handling (planetary) geospatial data
 """
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
+
 from pyproj import CRS
 from ._geopkg import Geopkg
+from ._rasterpkg import Rasterpkg
+from ._gpkg import GPkg
 
 
 def load_gpkg(filename):
@@ -18,6 +24,16 @@ def load_gpkg(filename):
 
 read_geopackage = load_gpkg
 
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
+
+def load_tiff(filename):
+    """
+    Load data from geotiff at 'filename'
+
+    Input:
+        filename: string: E.g, 'data.tiff'
+    Output:
+        ~gpt.Rasterpkg instance
+    """
+    return Rasterpkg(file=filename)
+
+read_geopackage = load_gpkg

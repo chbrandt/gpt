@@ -16,7 +16,7 @@ class Geopkg(_base.GeopkgBase):
     """
     _tempdir = None
 
-    def __init__(self, data=None, file=None, tempdir=None):
+    def __init__(self, data=None, crs=None, file=None, tempdir=None):
         """
         Dictionary-like structure to handle multi-layered geo data tables
 
@@ -35,7 +35,7 @@ class Geopkg(_base.GeopkgBase):
             self._tempdir = {'path':utils.create_tempdir(), 'generated':True}
         if file is not None:
             data = self._read_gpkg(file)
-        super().__init__(data)
+        super().__init__(data=data, crs=crs)
 
     def __del__(self):
         try:
