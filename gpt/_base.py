@@ -23,8 +23,9 @@ class GeopkgBase(object):
             - data: Dict[str,Any]
             - crs: str
         """
-        self.data = self._check_data(data)
-        self.crs = self._check_crs(crs)
+        assert data is None or isinstance(data, dict), "Data expected to be None or a dictionary {string:object}"
+        self.data = data if data else {}
+        self.crs = CRS(crs) if crs else None
         if self.data:
             if self.crs:
                 self.data = _to_crs(self.data, self.crs)
@@ -46,21 +47,27 @@ class GeopkgBase(object):
                     # self.data = self._to_crs(pick_crs)
                     # self.crs = pick_crs
 
-
-    def _check_data(self, data):
-        if data is None or not data:
-            return {}
-        is_dct = isinstance(data, dict)
+    def _check_data(self, messages=None):
+        msgs = messages if isinstance(messages, dict) else {}
+        if self.data is None or not self.data:
+            msgs['WARNING'] = msgs.get('WARNING', []) + ['Data not defined']
+            return False
+        is_dct = isinstance(self.data, dict)
         assert is_dct, "Expecting type(data)==dict"
-        return data
+        return True
 
-    def _check_crs(self, crs):
-        if crs is None or not crs:
-            return None
-        return CRS(crs)
+    def _check_crs(self, messages=None):
+        msgs = messages if isinstance(messages, dict) else {}
+        if self.crs is None or not self.crs:
+            msgs['ERROR'] = msgs.get('ERROR', []) + ['CRS not defined']
+            return False
+        return True
 
-    def check(self):
-        return self._check_crs(self.crs) and self._check_data(self.data)
+    def check(self, messages=None):
+        msgs = messages if isinstance(messages, dict) else {}
+        ok_data = self._check_data(messages=msgs)
+        ok_crs = self._check_crs(messages=msgs)
+        return ok_crs and ok_data
 
     def __getattr__(self, name):
         try:
