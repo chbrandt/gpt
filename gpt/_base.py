@@ -86,10 +86,14 @@ class GeopkgBase(object):
         for lyr, gdf in self.items():
             out += _tout(lyr)
             out += _tout("-" * len(lyr))
-            if len(gdf) > 10:
-                out += _tout_df(gdf)
-            else:
-                out += _tout_df(gdf)
+            # skip (temporarily) when this is not vector dataset but raster
+            try:
+                if len(gdf) > 10:
+                    out += _tout_df(gdf)
+                else:
+                    out += _tout_df(gdf)
+            except Exception as err:
+                print(str(err))
             out += "\n"
         return out
 

@@ -1,3 +1,5 @@
+import json
+
 from dataclasses import dataclass, make_dataclass, field, asdict
 from typing import List, Dict
 
@@ -97,6 +99,9 @@ meta_json_old = {
 
 @dataclass
 class _GMetaBase:
+    def __str__(self):
+        return json.dumps(dict(crs=self.crs))
+
     def check(self, messages=None, treat_warnings_as_errors=False):
         msgs = {}
         ok = True
@@ -245,3 +250,9 @@ class GPkg(object):
         """
         rst = gpt.load_tiff(filename)
         self._raster = rst
+
+    def __str__(self):
+        _str = "{}\n{}\n{}\n".format(
+                    str(self._meta), str(self._vector), str(self._raster)
+                )
+        return _str
