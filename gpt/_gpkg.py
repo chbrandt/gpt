@@ -51,50 +51,8 @@ meta_json_old = {
     )
 }
 
-# meta_json = {
-#     "project": {
-#         "type": str,
-#         "default": "GMap"
-#     },
-#     "name": {
-#         "type": str,
-#         "default": "package"
-#     },
-#     "body": {
-#         "type": str,
-#         "default": "package"
-#     },
-#     "type": (
-#         "type": str,
-#         field( default="geological" )
-#     ),
-#     "description": (
-#         str,
-#         field( default = '' )
-#     ),
-#     "crs": (
-#         str,
-#         field( default='' )
-#     ),
-#     "outline": (
-#         str,
-#         field( default='' )
-#     ),
-#     "bounding_box": {
-#         'minlat':0,
-#         'maxlat':0,
-#         'westlon':0,
-#         'eastlon':0
-#     },
-#     "references": (
-#         List[str],
-#         field( default_factory = lambda:["GMAP project"] )
-#     ),
-#     "attribution": (
-#         str,
-#         field( default = "[GMAP project](www.europlanet-gmap.eu)" )
-#     )
-# }
+
+_meta_old = tuple((k,*v) for k,v in meta_json_old.items())
 
 
 @dataclass
@@ -125,13 +83,15 @@ class _GMetaBase:
         return ok
 
 
-_meta_old = tuple((k,*v) for k,v in meta_json_old.items())
-
-# def init_gmeta(meta_json, id_format=None):
+# def init_gmeta(data_meta=None, data_schema=None, data_attrs=None, id_format=None):
 #     """
 #     Preprocess/validate meta-json and return an instance of GMeta
+#
+#     'data_meta' is a flat dictionary ({"key":value}).
+#     'data_schema' is a dictionary containing a json-schema.
+#     'data_attrs' is a list of attribute names.
 #     """
-#     _meta_old = tuple((k,*v) for k,v in meta_json_old.items())
+#     _meta_old = tuple((k,*v) for k,v in meta_json.items())
 #     _meta = None
 #     # TODO: make an "init" function for setting and pre-process '_meta/meta_json' (like above).
 #     #       It may get an string template for setting 'id' and 'meta_json' (using json-schema).
@@ -151,6 +111,26 @@ _GMeta = make_dataclass('_GMeta', _meta_old,
                         bases=(_GMetaBase,)
                        )
 
+def make_gmeta(meta):
+    cls = make_dataclass('Gmeta', meta,
+        namespace = {
+            'id': lambda self: "Gmeta-id"
+        })
+    return cls
+# class GMeta(object):
+#     def __init__(self, metadata=None, schema=None, id_format=None):
+#         """
+#         'metadata' is a {"key":value,} structure (defaults to {}).
+#         'schema' is a valid json-schema (defaults to {}).
+#         """
+#         # self.schema = Validator(schema) if schema else None.
+#         self.schema = None
+#         self.metadata = metadata if isinstance(metadata, dict) else None
+#         self.set_id(id_format)
+#
+#     @property
+#     def id(self, id_format=None):
+#         return '_'.join([str(v) for k,v in self.metadata.items()[:2]])
 
 class GPkg(object):
     """
@@ -167,7 +147,12 @@ class GPkg(object):
     _raster = None
 
     def __init__(self, meta=None, meta_vector=None, meta_raster=None, id_format=None):
-        self._meta = _GMeta() if not meta else _GMeta(**meta)
+        if meta is None:
+            self._meta = _GMeta()
+        else:
+            _cls = make_gmeta(meta)
+            self._meta = _cls(**meta)
+        assert self._meta, str(self._meta)
 
 #     def __bool__(self):
 #         return bool(self._meta) + bool(self._vector) + bool(self._raster)
