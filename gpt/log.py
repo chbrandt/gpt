@@ -1,33 +1,62 @@
 import logging
 
+# default formatter
+_format = '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s'
+
+# default level
+_level = 'DEBUG'
+
+# handlers available
+_handlers = {
+    'stream' : None,
+    'logfile' : None
+}
+
 # create logger
 logger = logging.getLogger(__package__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(_level)
 
-# create console handler and set level to debug
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+info = logger.info
+debug = logger.debug
+warning = logger.warning
+error = logger.error
+critical = logger.critical
 
-# create formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-# add formatter to ch
-ch.setFormatter(formatter)
+def set_level(level):
+    logger.setLevel(level.upper() if isinstance(level, str) else level)
 
-# add ch to logger
-logger.addHandler(ch)
+def set_stream(level=_level, format=_format):
+    # create console handler if not there yet
+    level = level.upper()
+    assert level in 'DEBUG INFO WARNING ERROR CRITICAL'.split()
+    stream = _handlers['stream']
+    if not stream:
+        stream = logging.StreamHandler()
+        _handlers['stream'] = stream
+    stream.setLevel(level)
+    stream.setFormatter(logging.Formatter(format))
+    logger.addHandler(stream)
 
-log = logger.info
+def set_logfile(filename, level=_level, format=_format):
+    # create ile handler and set level to debug
+    level = level.upper()
+    assert level in 'DEBUG INFO WARNING ERROR CRITICAL'.split()
+    logfile = _handlers['logfile']
+    if not logfile:
+        logfile = logging.FileHandler(filename)
+        _handlers['logfile'] = logfile
+    logfile.setLevel(level)
+    logfile.setFormatter(logging.Formatter(format))
+    logger.addHandler(logfile)
 
-# import logging
-# logging.basicConfig(format='{levelname}: {message!s}',
-#                     style='{',
-#                     level=logging.INFO)
-# logger = logging.getLogger('gpt')
-#
-# log = logger.info
-# logerr = logger.error
-#
-# del logger
-# del logging
-#
+def unset_logfile():
+    _unset_handler('logfile')
+
+def unset_stream():
+    _unset_handler('stream')
+
+def _unset_handler(label):
+    hdlr = _handlers[label]
+    logger.removeHandler(hdlr)
+    _handlers[label] = None
