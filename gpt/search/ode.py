@@ -7,7 +7,104 @@ import pandas
 # ODE REST-API endpoint
 API_URL = 'https://oderest.rsl.wustl.edu/live2'
 
-def available_datasets(target=None, summary=False):
+
+class Search(object):
+    _response = None
+
+    def __init__(self, target, ihid, iid, pt):
+        self._dataset = {
+            'target': target,
+            'ihid': ihid,
+            'iid': iid,
+            'pt': pt
+        }
+
+    def __repr__(self):
+        return '{cls}({args})'.format(
+                    cls=self.__class__.__name__,
+                    args=','.join([f'{k}="{v}"' for k,v in self._dataset.items()])
+                )
+
+    def __str__(self):
+        import json
+        return json.dumps(self._response)
+
+    def available_datasets(self):
+        import re
+        ds = self._dataset
+        df = available_datasets(target=ds['target'])
+        orig_index = df.index.names
+        _df = df.reset_index()
+        _ihid = _df['IHID'].str.match(ds['ihid'], flags=re.IGNORECASE)
+        _iid = _df['IID'].str.match(ds['iid'], flags=re.IGNORECASE)
+        _pt = _df['PT'].str.match(ds['pt'], flags=re.IGNORECASE)
+        df = _df.loc[_ihid & _iid & _pt]
+        return df.set_index(orig_index)
+
+    def search(self, bbox, match='contain'):
+        ds = self._dataset
+        response = search(bbox, match=match,
+                            target=ds['target'], ihid=ds['ihid'],
+                            iid=ds['iid'], pt=ds['pt'])
+        self._response = response
+        return Results(self._response)
+
+
+
+class Results(object):
+    _products = None
+
+    def __init__(self, response: list):
+        self._products = parse_products(response)
+        self._df = None
+
+    def __repr__(self):
+        return repr(self._products)
+
+    def __str__(self):
+        return str(self._products)
+
+    def __len__(self):
+        return len(self._products)
+
+    def to_geodataframe(self, geometry_field='Footprint_C0_geometry',
+                        meta_selectors=None, data_selectors=None,
+                        meta_select_how='filter', data_select_how='all'):
+        products = parse_products(self._products,
+                                    meta_selectors=meta_selectors,
+                                    data_selectors=data_selectors,
+                                    meta_select_how=meta_select_how,
+                                    data_select_how=data_select_how,
+                                    include_notes=False, include_footprints=True)
+        df = to_geodataframe(products,
+                                geometry_field=geometry_field,
+                                exclude_footprints=True,
+                                unstack_field='product_files')
+        self._df = df
+        return df
+
+    def to_geojson(self, output_filename, **kwargs):
+        gdf = self.to_geodataframe(**kwargs)
+        gjs = geodataframe_to_geojson(gdf, output_filename)
+        return gjs
+
+    def plot(self, legend_column='pdsid'):
+        if not self._df:
+            df = self.to_geodataframe()
+        else:
+            df = self._df
+        if not legend_column or legend_column not in df.columns:
+            return df.plot(alpha=0.25, edgecolor='red', figsize=(12,8))
+        else:
+            df = df[[legend_column, 'geometry']].drop_duplicates(ignore_index=True)
+            return df.plot(alpha=0.25, edgecolor='red',
+                            legend=True, column=legend_column,
+                            legend_kwds={'loc': 'upper left', 'bbox_to_anchor': (1, 1)},
+                            figsize=(12,8))
+
+
+
+def available_datasets(target=None, minimal=False):
     """
     Return ~pandas.DataFrame with ODE's table of available datasets
 
@@ -17,8 +114,8 @@ def available_datasets(target=None, summary=False):
     Input:
         - target : string
             Planetary body
-        - return_all : bool
-            If True, return all columns from ODE/IIPT, otherwise just the important ones
+        - minimal : bool
+            If True, return a subset of data, otherwise return everything
     Output:
         Return ~pandas.DataFrame with IIPT results, otherwise None
     """
@@ -38,12 +135,15 @@ def available_datasets(target=None, summary=False):
 
     df = pandas.DataFrame(datasets)[id_columns + ok_columns]
     df = df.set_index(id_columns)
-    if summary:
+    if minimal:
         return df.index.unique().to_frame().reset_index(drop=True)
     return df
 
 
 def search(bbox, target, ihid, iid, pt, match='contain'):
+    return _get_ps(_search(bbox, target, ihid, iid, pt, match))
+
+def _search(bbox, target, ihid, iid, pt, match='contain'):
     from npt.utils.bbox import Bbox
     bbox = Bbox(bbox).to_dict()
 
@@ -71,13 +171,15 @@ def search(bbox, target, ihid, iid, pt, match='contain'):
         params.update({'loc':'o'})
 
     resjs = _request(API_URL, params)
+    return resjs
+
+
+def _get_ps(resjs):
     if not resjs:
         return None
-
     products = resjs['ODEResults']['Products']['Product']
     # If only one data product is found, 'products' is not a list; fix this
     products = products if isinstance(products, (list,tuple)) else [products]
-
     return products
 
 
@@ -124,6 +226,10 @@ def to_geojson(products: list, geometry_field='Footprint_C0_geometry',
                 output_filename=None):
     import json
     gdf = to_geodataframe(products, geometry_field, exclude_footprints, unstack_field)
+    return geodataframe_to_geojson(gdf, output_filename)
+
+
+def geodataframe_to_geojson(gdf, output_filename=None):
     gjs = gdf.to_json()
     assert isinstance(gjs, str)
     if output_filename:
@@ -151,8 +257,8 @@ def parse_products(resjs, meta_selectors=None, data_selectors=None,
             if include_footprints and 'footprint' in key.lower():
                 meta[key] = value
                 continue
-            if key == 'Product_files':
-                files = product[key]['Product_file']
+            if key == 'Product_files' or key == 'product_files':
+                files = product[key]['Product_file'] if files is None else files
                 if data_selectors:
                     match_all = True if data_select_how == 'all' else False
                     files = select_files(files, data_selectors, match_all)
