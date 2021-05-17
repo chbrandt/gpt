@@ -10,6 +10,7 @@ API_URL = 'https://oderest.rsl.wustl.edu/live2'
 
 class Search(object):
     _response = None
+    _dataset = None
 
     def __init__(self, target, ihid, iid, pt):
         self._dataset = {
@@ -83,13 +84,13 @@ class Results(object):
         self._df = df
         return df
 
-    def to_geojson(self, output_filename, **kwargs):
-        gdf = self.to_geodataframe(**kwargs)
-        gjs = geodataframe_to_geojson(gdf, output_filename)
-        return gjs
+    # def to_geojson(self, output_filename, **kwargs):
+    #     gdf = self.to_geodataframe(**kwargs)
+    #     gjs = geodataframe_to_geojson(gdf, output_filename)
+    #     return gjs
 
     def plot(self, legend_column='pdsid'):
-        if not self._df:
+        if self._df is None:
             df = self.to_geodataframe()
         else:
             df = self._df
@@ -144,7 +145,8 @@ def search(bbox, target, ihid, iid, pt, match='contain'):
     return _get_ps(_search(bbox, target, ihid, iid, pt, match))
 
 def _search(bbox, target, ihid, iid, pt, match='contain'):
-    from npt.utils.bbox import Bbox
+    from gpt.helpers import Bbox
+
     bbox = Bbox(bbox).to_dict()
 
     params = dict(
