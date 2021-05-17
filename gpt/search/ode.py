@@ -57,7 +57,7 @@ class Results(object):
 
     def __init__(self, response: list):
         self._products = parse_products(response)
-        self._df = None
+        self._df = self.to_geodataframe()
 
     def __repr__(self):
         return repr(self._products)
@@ -67,6 +67,10 @@ class Results(object):
 
     def __len__(self):
         return len(self._products)
+
+    def show(self, what):
+        if what == 'unique':
+            describe_unique(self._df)
 
     def to_geodataframe(self, geometry_field='Footprint_C0_geometry',
                         meta_selectors=None, data_selectors=None,
@@ -103,6 +107,45 @@ class Results(object):
                             legend_kwds={'loc': 'upper left', 'bbox_to_anchor': (1, 1)},
                             figsize=(12,8))
 
+
+def describe_unique(df):
+    size = len(df)
+    unique_columns = {}
+    redundant_columns = {}
+    important_columns = {}
+    erroneous_columns = {}
+    for col in df.columns:
+        try:
+            uniq_vals = df[col].unique()
+            if len(uniq_vals)/size >= 0.5:
+                if len(uniq_vals) == size:
+                    msg = "All values are unique, important stuff"
+                    unique_columns.update({col:msg})
+                else:
+                    msg = "Big variance of values (>=50%), looks important."
+                    important_columns.update({col:msg})
+            else:
+                msg = str(uniq_vals)
+                redundant_columns.update({col:msg})
+        except Exception as err:
+            msg = "Could not evaluate the values"
+            erroneous_columns.update({col:msg})
+
+    def print_kv(cols: dict):
+        for k,v in cols.items():
+            print('{:10}: {}'.format(k,v))
+
+    print("\nImportant columns:")
+    print_kv(important_columns)
+
+    print("\nUnique columns:")
+    print_kv(unique_columns)
+
+    print("\nErroneous columns:")
+    print_kv(erroneous_columns)
+
+    print("\nRedundant columns:")
+    print_kv(redundant_columns)
 
 
 def available_datasets(target=None, minimal=False):
