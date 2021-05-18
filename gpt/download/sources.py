@@ -1,26 +1,49 @@
+import os
 import json
-from collections import UserList, UserDict
+from collections import UserDict
 
+from gpt.helpers import Collection
+from gpt.download import download
 
 
 def from_geojson(filename):
-    with open(filename, 'r') as fp:
-        gjs = json.load(fp)
-    return Sources(gjs)
-    
+    return Sources.from_geojson(filename)
 
 
-class Sources(UserList):
-    def __init__(self, geojson: dict):
-        features = make_products(geojson['features'])
-        super().__init__(features)
+class Sources(Collection):
+    def __init__(self, features, *args, **kwargs):
+        super().__init__(features, *args, **kwargs)
+
+    def download(self, url_column, file_column, path=None, make_dirs=False):
+        """
+        Return collection with path to downloaded file
+
+        Input:
+            - url_column : string
+                Column name contains URLs to download files from.
+            - file_column : string
+                Column (name) to add with downloaded files path/location
+        Output:
+            Collection object with new meta refering to fresh downloaded files
+        """
+        if not path:
+            path = '.'
+        paths = list(self.deref(path))
+        urls = list(self._get_field(url_column))
+        filenames = [url.split('/')[-1] for url in urls]
+        filenames = [os.path.join(path, name) for path,name in zip(paths,filenames)]
+        assert len(filenames) == len(urls), "List of 'filenames' must match length of 'urls'"
+
+        filenames = download(urls, filenames, make_dirs=make_dirs)
+
+        return self._add_field(file_column, filenames, inplace=True)
 
 
 
-class Products(UserList):
+class Products(Collection):
     def __init__(self, products: list, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.extend([Product(p) for p in products])
+        products = [Product(p) for p in products]
+        super().__init__(products, *args, **kwargs)
 
 
 

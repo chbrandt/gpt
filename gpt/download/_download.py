@@ -9,11 +9,6 @@ from gpt import log
 def download_files(urls, filenames=None, progress_on=False, make_dirs=False):
     assert isinstance(urls, (list, tuple))
 
-    if path and path.strip():
-        os.makedirs(path)
-    else:
-        path = '.'
-
     if not filenames:
         filenames = [ url.split('/')[-1] for url in urls ]
     assert len(filenames) == len(urls), "List of 'filenames' must match length of 'urls'"
@@ -39,6 +34,7 @@ def download_file(url, filename=None, progress_on=False, make_dirs=True):
 
     if _is_downloaded(url, local_filename):
         log.debug("File '{}' from '{}' already downloaded".format(local_filename, url))
+        print("File '{}' from '{}' already downloaded".format(local_filename, url))
         return local_filename
 
     _path = os.path.dirname(local_filename)
