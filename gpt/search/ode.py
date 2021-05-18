@@ -185,7 +185,23 @@ def available_datasets(target=None, minimal=False):
 
 
 def search(bbox, target, ihid, iid, pt, match='contain'):
-    return _get_ps(_search(bbox, target, ihid, iid, pt, match))
+    resjs = _search(bbox, target, ihid, iid, pt, match)
+    try:
+        out = _get_ps(resjs)
+    except:
+        return None
+    else:
+        return out
+
+
+def _get_ps(resjs):
+    if not resjs:
+        return None
+    products = resjs['ODEResults']['Products']['Product']
+    # If only one data product is found, 'products' is not a list; fix this
+    products = products if isinstance(products, (list,tuple)) else [products]
+    return products
+
 
 def _search(bbox, target, ihid, iid, pt, match='contain'):
     from gpt.helpers import Bbox
@@ -219,13 +235,39 @@ def _search(bbox, target, ihid, iid, pt, match='contain'):
     return resjs
 
 
-def _get_ps(resjs):
-    if not resjs:
+def _request(url, params):
+    """
+    Return JSON from GET request at 'url' for 'params' queried
+
+    Input:
+        - url : string
+            API endpoint (http url)
+        - params : dict
+            parameters for the GET request
+    Output:
+        JSON object/dict if response is valid (code=200), otherwise, None
+    """
+    import requests
+
+    # Let's guarantee that we hava JSON as result
+    _params = params.copy()
+    _params.update({ 'output':'JSON' })
+
+    res = requests.get(API_URL, _params)
+
+    # If response is not a round 200, fail it
+    if res.status_code != 200:
+        print('Request response failed:', str(res))
         return None
-    products = resjs['ODEResults']['Products']['Product']
-    # If only one data product is found, 'products' is not a list; fix this
-    products = products if isinstance(products, (list,tuple)) else [products]
-    return products
+
+    js = res.json()
+
+    # If response is valid (200) but ODE itself failed to respond the query, alert user
+    if js['ODEResults']['Status'].lower() != 'success':
+        print("Returned result says 'ODEResults'/'Status' != 'success'. Check for more info.")
+
+    return js
+
 
 
 def to_geodataframe(products: list, geometry_field='Footprint_C0_geometry',
@@ -319,6 +361,8 @@ def parse_products(resjs, meta_selectors=None, data_selectors=None,
                 or (key not in meta_selectors and meta_select_how == 'exclude')):
                     meta[key] = value
 
+        if not files:
+            continue
         meta['product_files'] = files
         if include_notes:
             meta['notes'] = notes
@@ -355,40 +399,6 @@ def _match_selector(selector_field, selector_value, product_file):
     regex = re.compile(selector_value, re.IGNORECASE)
     search_value = product_file[selector_field]
     return regex.search(search_value)
-
-
-def _request(url, params):
-    """
-    Return JSON from GET request at 'url' for 'params' queried
-
-    Input:
-        - url : string
-            API endpoint (http url)
-        - params : dict
-            parameters for the GET request
-    Output:
-        JSON object/dict if response is valid (code=200), otherwise, None
-    """
-    import requests
-
-    # Let's guarantee that we hava JSON as result
-    _params = params.copy()
-    _params.update({ 'output':'JSON' })
-
-    res = requests.get(API_URL, _params)
-
-    # If response is not a round 200, fail it
-    if res.status_code != 200:
-        print('Request response failed:', str(res))
-        return None
-
-    js = res.json()
-
-    # If response is valid (200) but ODE itself failed to respond the query, alert user
-    if js['ODEResults']['Status'].lower() != 'success':
-        print("Returned result says 'ODEResults'/'Status' != 'success'. Check for more info.")
-
-    return js
 
 
 

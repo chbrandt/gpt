@@ -4,6 +4,10 @@ from collections import UserList
 
 
 
+def from_geojson(filename):
+    return Collection.from_geojson(filename)
+
+
 class Collection(object):
     _gdf = None
 
@@ -17,21 +21,13 @@ class Collection(object):
         if index:
             self.data.set_index(index)
 
-    @property
-    def data(self):
-        return self._gdf
 
     def _set_data(self, data):
         self._gdf = data
 
-    def __getitem__(self, name):
-        return self.data[name]
-
-    # def __setitem__(self, name, value):
-    #     self.data[name] = value
-    #
-    # def __delitem__(self, name):
-    #     del self.data[name]
+    @property
+    def data(self):
+        return self._gdf
 
     def __repr__(self):
         return repr(self.data)
@@ -44,6 +40,15 @@ class Collection(object):
 
     def __iter__(self):
         return iter(self.data)
+
+    def __getitem__(self, name):
+        return self.data[name]
+
+    # def __setitem__(self, name, value):
+    #     self.data[name] = value
+    #
+    # def __delitem__(self, name):
+    #     del self.data[name]
 
     def _get_field(self, column):
         return self.data[column]
