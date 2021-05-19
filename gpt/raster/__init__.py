@@ -6,16 +6,48 @@ from rasterio.warp import calculate_default_transform, reproject
 from . import log
 
 # Default resampling method
-_RESAMPLING = Resampling.bilinear
+# _RESAMPLING = Resampling.bilinear
 
 
-def open(filename):
+# open = rasterio.open
+
+def mosaic(filenames, output):
     """
-    Return Rasterio object from (tiff) 'filename'
+    Return filename of merged 'filenames' GeoTIFFs
+
+    Input:
+        filenames : list
+            List of filenames to merge
+        output : string
+            Mosaic filename
     """
-    return rasterio.open(filename)
-    
-def resample(filename_in, filename_out, scale_factor=0.5):
+    from rasterio.merge import merge
+
+    with rasterio.open(files_tif[0]) as src:
+        meta = src.meta.copy()
+
+    # The merge function returns a single array and the affine transform info
+    arr, out_trans = merge(files_tif)
+
+    meta.update({
+        "driver": "GTiff",
+        "height": arr.shape[1],
+        "width": arr.shape[2],
+        "transform": out_trans
+    })
+
+    # Write the mosaic raster to disk
+    with rasterio.open(output, "w", **meta) as dest:
+        dest.write(arr)
+
+    return output
+
+
+
+def rescale(filename_in, filename_out, factor=0.5, resampling=Resampling.bilinear):
+    """
+    Return filename of resampled image.
+    """
 
     with rasterio.open(filename_in) as src:
 
@@ -26,7 +58,7 @@ def resample(filename_in, filename_out, scale_factor=0.5):
         # resample data to target shape
         data = src.read(
             out_shape=(src.count, height, width),
-            resampling=_RESAMPLING
+            resampling=resampling
         )
 
         # copy src metadata, update as necessary for 'dst'
@@ -44,8 +76,15 @@ def resample(filename_in, filename_out, scale_factor=0.5):
 
         return filename_out
 
+resample = rescale
 
-def scale_transform(transform_src, width_src, height_src, scale_factor=0.5):
+
+def scale_transform(transform_src, width_src, height_src, factor=0.5):
+    """
+    Return (transform, width, height) after applying 'factor'.
+    """
+    scale_factor = factor
+
     src_transform = transform_src
     src_height = height_src
     src_width = width_src
@@ -56,8 +95,6 @@ def scale_transform(transform_src, width_src, height_src, scale_factor=0.5):
 
     # scale image transform
     transform = src_transform * src_transform.scale(
-        # (src.width / data.shape[-1]),
-        # (src.height / data.shape[-2])
         (src_width / width),
         (src_height / height)
     )
@@ -66,7 +103,9 @@ def scale_transform(transform_src, width_src, height_src, scale_factor=0.5):
 
 
 def warp(fileinname, fileoutname, dst_crs='EPSG:4326', scale_factor=None):
-
+    """
+    Reproject raster from "file-in" to "file-out". Return output filename.
+    """
     with rasterio.open(fileinname) as src:
 
         # compute transform and boundaries for new CRS
@@ -104,7 +143,10 @@ def warp(fileinname, fileoutname, dst_crs='EPSG:4326', scale_factor=None):
 
 def to_tiff(filename_in, filename_out, format_in, cog=False):
     """
-    For accepted formats (in): https://gdal.org/drivers/raster/index.html
+    Transform file "in" to GeoTIFF (tiled, if 'cog=True'). Return filename.
+
+    Input file format-in should be compatible with rasterio/gdal,
+    for accepted formats: https://gdal.org/drivers/raster/index.html
     """
     format_in = 'ISIS3' if format_in == 'ISIS' else format_in
     if cog:
@@ -124,10 +166,20 @@ def to_tiff(filename_in, filename_out, format_in, cog=False):
         return filename_out
 
 
-def to_cog(filename_in, filename_out, format_in):
+GDAL_TIFF_OVR_BLOCKSIZE=512
+GDAL_TIFF_COMPRESS='LZW'
+
+
+def to_cog(filename_in, filename_out, format_in='GTiff'):
+    """
+    Transform input file to COG GeoTIFF (tiled=True'). Return filename.
+
+    Input file format-in should be compatible with rasterio/gdal,
+    for accepted formats: https://gdal.org/drivers/raster/index.html
+    """
 
     format_in = 'ISIS3' if format_in == 'ISIS' else format_in
-    with rasterio.Env(GDAL_TIFF_OVR_BLOCKSIZE=512):
+    with rasterio.Env(GDAL_TIFF_OVR_BLOCKSIZE=GDAL_TIFF_OVR_BLOCKSIZE):
         with rasterio.open(filename_in, 'r', driver=format_in) as src:
             # Get a copy of the source dataset's profile. Thus our
             # destination dataset will have the same dimensions,
@@ -137,9 +189,9 @@ def to_cog(filename_in, filename_out, format_in):
             kwds['driver'] = 'GTiff'
             # Add GeoTIFF-specific keyword arguments.
             kwds['tiled'] = True
-            kwds['blockxsize'] = 512
-            kwds['blockysize'] = 512
-            kwds['compress'] = 'LZW'
+            kwds['blockxsize'] = GDAL_TIFF_OVR_BLOCKSIZE
+            kwds['blockysize'] = GDAL_TIFF_OVR_BLOCKSIZE
+            kwds['compress'] = GDAL_TIFF_COMPRESS
             kwds['copy_src_overviews'] = True
             with rasterio.open(filename_out, 'w', **kwds) as dst:
                     dst.write(src.read())
