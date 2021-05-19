@@ -1,3 +1,6 @@
+"""
+Provides Rasterio based function to merge/transfor (GeoTIFF) rasters
+"""
 import os
 import rasterio
 from rasterio.enums import Resampling
@@ -5,11 +8,13 @@ from rasterio.warp import calculate_default_transform, reproject
 
 from . import log
 
+
 # Default resampling method
 # _RESAMPLING = Resampling.bilinear
+GDAL_TIFF_OVR_BLOCKSIZE=512
+GDAL_TIFF_COMPRESS='LZW'
 
 
-# open = rasterio.open
 
 def mosaic(filenames, output):
     """
@@ -51,7 +56,7 @@ def rescale(filename_in, filename_out, factor=0.5, resampling=Resampling.bilinea
 
     with rasterio.open(filename_in) as src:
 
-        transform, width, height = scale_transform(src.transform,
+        transform, width, height = _scale_transform(src.transform,
                                                     src.width, src.height,
                                                     scale_factor=scale_factor)
 
@@ -79,7 +84,8 @@ def rescale(filename_in, filename_out, factor=0.5, resampling=Resampling.bilinea
 resample = rescale
 
 
-def scale_transform(transform_src, width_src, height_src, factor=0.5):
+
+def _scale_transform(transform_src, width_src, height_src, factor=0.5):
     """
     Return (transform, width, height) after applying 'factor'.
     """
@@ -102,6 +108,7 @@ def scale_transform(transform_src, width_src, height_src, factor=0.5):
     return (transform, width, height)
 
 
+
 def warp(fileinname, fileoutname, dst_crs='EPSG:4326', scale_factor=None):
     """
     Reproject raster from "file-in" to "file-out". Return output filename.
@@ -113,7 +120,7 @@ def warp(fileinname, fileoutname, dst_crs='EPSG:4326', scale_factor=None):
             src.crs, dst_crs, src.width, src.height, *src.bounds)
 
         if scale_factor:
-            transform, width, height = scale_transform(transform,
+            transform, width, height = _scale_transform(transform,
                                                        width, height,
                                                        scale_factor)
 
@@ -141,6 +148,7 @@ def warp(fileinname, fileoutname, dst_crs='EPSG:4326', scale_factor=None):
     return fileoutname
 
 
+
 def to_tiff(filename_in, filename_out, format_in, cog=False):
     """
     Transform file "in" to GeoTIFF (tiled, if 'cog=True'). Return filename.
@@ -165,9 +173,6 @@ def to_tiff(filename_in, filename_out, format_in, cog=False):
 
         return filename_out
 
-
-GDAL_TIFF_OVR_BLOCKSIZE=512
-GDAL_TIFF_COMPRESS='LZW'
 
 
 def to_cog(filename_in, filename_out, format_in='GTiff'):
