@@ -72,6 +72,11 @@ class Results(object):
         if what == 'unique':
             describe_unique(self._df)
 
+    def unstack(self, field, func=None):
+        products = unstack(self._products, field, func)
+        self._products
+        return self
+
     def to_geodataframe(self, geometry_field='Footprint_C0_geometry',
                         meta_selectors=None, data_selectors=None,
                         meta_select_how='filter', data_select_how='all'):
@@ -84,7 +89,8 @@ class Results(object):
         df = to_geodataframe(products,
                                 geometry_field=geometry_field,
                                 exclude_footprints=True,
-                                unstack_field='product_files')
+                                unstack_field='product_files',
+                                unstack_function=None)
         self._df = df
         return df
 
@@ -269,9 +275,29 @@ def _request(url, params):
     return js
 
 
+def unstack(products: list, field: str, products_mapping=None):
+    mapping = products_mapping
+    _products = []
+    for product in products:
+        _product = {k:v for k,v in product.items() if k not in field}
+        if mapping is None:
+            content_to_unstack = product[field]
+        elif isinstance(mapping, dict):
+            files = product[field]
+            _d_ = {v[0]:ff[v[1]] for ff in files for k,v in mapping.items() if ff[k[0]]==k[1]}
+            content_to_unstack = [_d_]
+        else:
+            assert callable(products_mapping)
+            content_to_unstack = [products_mapping(product[field])]
+
+        _products.extend([ dict(_product, **ukw) for ukw in content_to_unstack ])
+
+    return _products
+
 
 def to_geodataframe(products: list, geometry_field='Footprint_C0_geometry',
-                    exclude_footprints=True, unstack_field='product_files'):
+                    exclude_footprints=True, unstack_field='product_files',
+                    unstack_function=None):
     import geopandas
     import shapely
 
@@ -282,9 +308,9 @@ def to_geodataframe(products: list, geometry_field='Footprint_C0_geometry',
 
         fields_to_exclude = set()
         content_to_unstack = None
-        if unstack_field:
-            content_to_unstack = product[unstack_field]
-            fields_to_exclude.add(unstack_field)
+        # if unstack_field:
+        #     content_to_unstack = product[unstack_field]
+        #     fields_to_exclude.add(unstack_field)
         if exclude_footprints:
             fields_to_exclude.update(set(filter(lambda f:'footprint' in f.lower(), product.keys())))
 
@@ -299,10 +325,14 @@ def to_geodataframe(products: list, geometry_field='Footprint_C0_geometry',
             _product['geometry'] = geometry
 
         if content_to_unstack:
+            assert False
             assert isinstance(content_to_unstack, list)
             _products.extend([ dict(_product, **ukw) for ukw in content_to_unstack ])
         else:
             _products.append(_product)
+
+    if unstack_field:
+        _products = unstack(_products, unstack_field, unstack_function)
 
     gdf = geopandas.GeoDataFrame(_products)
     return gdf
@@ -328,10 +358,45 @@ def geodataframe_to_geojson(gdf, output_filename=None):
 
 
 def parse_products(resjs, meta_selectors=None, data_selectors=None,
-                    meta_select_how='filter', data_select_how='all',
+                    meta_select_how='keep', data_select_how='all',
                     include_notes=True, include_footprints=True):
+    """
+    Apply filters and remove exceeding object nesting from ODE results or already parsed results
 
-    assert meta_select_how in ('filter','exclude')
+    This function also accepts already parsed products (output from this function).
+
+    This function was primarily meant to remove the exceeding nesting levels of
+    'Products_files' and 'ODE_notes' from ODE-REST results. Then grew to filter
+    or exclude certain fields ('meta_selectors', 'include_notes/footprints'),
+    and select data files according to some criteria ('data_selectors','data_select_how').
+
+    Input:
+        resjs : list
+            Content from ODE-REST result' ['ODEResults']['Products']['Product'].
+        meta_selectors : list [string,]
+            List of fields to keep or remove, according to 'meta_select_how'.
+            Does not apply for "footprint_*" fields, "Product files" or "Notes",
+            see 'include_notes' and 'include_footprints' for those.
+        meta_select_how : string ('keep', 'exclude')
+            What to do to/if given 'meta_selectors'. Options are ['keep','exclude'].
+        data_selectors : dictionary {string:string}
+            Applys to "Product files", for filtering data/files of interest.
+            Which fields to consider (key) and which regular expression to look for (value).
+            Values can be a string of list of strings.
+        data_select_how : string ('any', 'all')
+            If 'all', select data/files matching all 'data_selectors' keys.
+            If 'any', select data/files matching any 'data_selectors' key.
+        include_notes : bool
+            If True, keep 'ODE_notes' or 'notes', and rename it to 'notes'
+        include_footprints : bool
+            If True, keep 'footprint_*' fields.
+
+    Output:
+        List of products with filter applied, if any, ['Product_files']['Products']
+        as ['product_files'] and ['ODE_notes']['notes'] as ['notes']
+    """
+
+    assert meta_select_how in ('keep','remove')
     assert data_select_how in ('any','all'), "Expected to have 'all' or 'any' for 'match_selector'"
 
     selectors_not_found= set()

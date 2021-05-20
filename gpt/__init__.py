@@ -5,11 +5,12 @@ from ._version import get_versions
 __version__ = get_versions()['version']
 del get_versions
 
+from . import log
+
 from pyproj import CRS
 from ._geopkg import Geopkg
 from ._rasterpkg import Rasterpkg
 from ._gpkg import GPkg
-
 
 def load_gpkg(filename):
     """

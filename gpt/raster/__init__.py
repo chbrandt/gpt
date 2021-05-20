@@ -6,7 +6,7 @@ import rasterio
 from rasterio.enums import Resampling
 from rasterio.warp import calculate_default_transform, reproject
 
-from . import log
+from .. import log
 
 
 # Default resampling method
