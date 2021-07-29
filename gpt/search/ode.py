@@ -4,11 +4,14 @@ Define functions/Ojects to interact with ODE REST API (http://oderest.rsl.wustl.
 import requests
 import pandas
 
+
 # ODE REST-API endpoint
 _API_URL = 'https://oderest.rsl.wustl.edu/live2'
 
 
-class Search(object):
+from gpt.search import SearchBase
+
+class Search(SearchBase):
     _response = None
     _dataset = None
 
@@ -30,25 +33,30 @@ class Search(object):
         import json
         return json.dumps(self._response)
 
-    def available_datasets(self):
-        import re
+    def available_datasets(self, minimal):
+        # import re
         ds = self._dataset
-        df = available_datasets(target=ds['target'])
-        orig_index = df.index.names
-        _df = df.reset_index()
-        _ihid = _df['IHID'].str.match(ds['ihid'], flags=re.IGNORECASE)
-        _iid = _df['IID'].str.match(ds['iid'], flags=re.IGNORECASE)
-        _pt = _df['PT'].str.match(ds['pt'], flags=re.IGNORECASE)
-        df = _df.loc[_ihid & _iid & _pt]
-        return df.set_index(orig_index)
+        # df = available_datasets(target=ds['target'])
+        # orig_index = df.index.names
+        # _df = df.reset_index()
+        # _ihid = _df['IHID'].str.match(ds['ihid'], flags=re.IGNORECASE)
+        # _iid = _df['IID'].str.match(ds['iid'], flags=re.IGNORECASE)
+        # _pt = _df['PT'].str.match(ds['pt'], flags=re.IGNORECASE)
+        # df = _df.loc[_ihid & _iid & _pt]
+        # return df.set_index(orig_index)
+        #
+        return available_datasets(ds['target'], ds['ihid'], ds['iid'], minimal)
 
-    def search(self, bbox, match='contain'):
+    def search(self, bbox, intersect=True):
         ds = self._dataset
+        match = 'intersect' if intersect else 'contain'
         response = search(bbox, match=match,
                             target=ds['target'], ihid=ds['ihid'],
                             iid=ds['iid'], pt=ds['pt'])
         self._response = response
         return Results(self._response)
+
+    bbox = search
 
 
 
@@ -98,6 +106,10 @@ class Results(object):
     #     gdf = self.to_geodataframe(**kwargs)
     #     gjs = geodataframe_to_geojson(gdf, output_filename)
     #     return gjs
+
+    def to_geojson(self, filename):
+        gdf = self._df if self._df is not None else self.to_geodataframe()
+        geodataframe_to_geojson(gdf, filename)
 
     def plot(self, legend_column='pdsid'):
         if self._df is None:

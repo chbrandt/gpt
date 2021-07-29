@@ -4,6 +4,14 @@ Functions and Classes to handle geo-spatial data search on DBs or REST/APIs
 
 from gpt.helpers import Bbox
 
+from abc import ABC, abstractmethod
+
+class SearchBase(ABC):
+    @abstractmethod
+    def bbox(self, bbox):
+        pass
+
+
 # -----------------------------------------
 # Dynamic load module in current directory:
 #
@@ -15,10 +23,11 @@ import importlib
 
 pkg = sys.modules[__package__]
 
-_mods = []
-for finder, name, ispkg in pkgutil.iter_modules(pkg.__path__, pkg.__name__+'.'):
-    mod = importlib.import_module(name)
-    _mods.append(mod)
+_mods = {}
+for finder, namespace, ispkg in pkgutil.iter_modules(pkg.__path__, pkg.__name__+'.'):
+    name = namespace.split('.')[-1]
+    mod = importlib.import_module(namespace)
+    _mods[name] = mod
 
 del pkg, finder, name, ispkg, mod
 del importlib, pkgutil, sys
@@ -26,7 +35,20 @@ del importlib, pkgutil, sys
 # -----------------------------------------
 
 def available_apis():
-    return [ m.__name__.split('.')[-1] for m in _mods ]
+    # return [ m.__name__.split('.')[-1] for m in _mods.values() ]
+    return list(_mods)
+
+def get_api(name):
+    """
+    Return object implementing/inheriting from ~Search
+    """
+    mod = _mods[name]
+    if hasattr(mod, 'Search'):
+        api = getattr(mod, 'Search')
+        assert issubclass(api, SearchBase)
+    else:
+        api = mod
+    return api
 
 
 def footprints(bbox, api='ode', db=None, match="intersect",
