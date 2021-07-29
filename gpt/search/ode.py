@@ -5,7 +5,7 @@ import requests
 import pandas
 
 # ODE REST-API endpoint
-API_URL = 'https://oderest.rsl.wustl.edu/live2'
+_API_URL = 'https://oderest.rsl.wustl.edu/live2'
 
 
 class Search(object):
@@ -68,7 +68,7 @@ class Results(object):
     def __len__(self):
         return len(self._products)
 
-    def show(self, what):
+    def show(self, what='unique'):
         if what == 'unique':
             describe_unique(self._df)
 
@@ -79,7 +79,7 @@ class Results(object):
 
     def to_geodataframe(self, geometry_field='Footprint_C0_geometry',
                         meta_selectors=None, data_selectors=None,
-                        meta_select_how='filter', data_select_how='all'):
+                        meta_select_how='exclude', data_select_how='all'):
         products = parse_products(self._products,
                                     meta_selectors=meta_selectors,
                                     data_selectors=data_selectors,
@@ -154,7 +154,7 @@ def describe_unique(df):
     print_kv(redundant_columns)
 
 
-def available_datasets(target=None, minimal=False):
+def available_datasets(target='Mars', ihid=None, iid=None, minimal=False):
     """
     Return ~pandas.DataFrame with ODE's table of available datasets
 
@@ -163,30 +163,51 @@ def available_datasets(target=None, minimal=False):
 
     Input:
         - target : string
-            Planetary body
+            Planetary body (Default: 'Mars')
+        - ihid : string
+            Mission (Instrument Host ID) to filter datasets list
+        - iid : string
+            Instrument (Instrument ID) to filter datasets list.
+            Note: works only if 'ihid' is also specified.
         - minimal : bool
             If True, return a subset of data, otherwise return everything
     Output:
         Return ~pandas.DataFrame with IIPT results, otherwise None
     """
+    assert isinstance(target, str)
+
+    target = target.upper()
+    if ihid:
+        ihid = ihid.upper()
+    if iid:
+        iid = iid.upper()
+
     params = { 'query' : 'iipt' }
     if target.strip():
-        params.update({ 'odemetadb':'mars' })
+        params.update({ 'odemetadb': target })
 
     # res = requests.get('http://oderest.rsl.wustl.edu/live2?query=iipt&output=JSON&odemetadb=mars')
-    resjs = _request(API_URL, params)
+    resjs = _request(_API_URL, params)
     if not resjs:
         return None
 
     datasets = resjs['ODEResults']['IIPTSets']['IIPTSet']
 
     id_columns = 'ODEMetaDB IHID IID PT'.split()
-    ok_columns = 'DataSetId IHName IName PTName NumberProducts'.split()
+    ok_columns = 'DataSetId IHName IName PTName'.split()
+    n_column = ['NumberProducts']
 
-    df = pandas.DataFrame(datasets)[id_columns + ok_columns]
+    df = pandas.DataFrame(datasets)[id_columns + ok_columns + n_column]
+    df[id_columns] = df[id_columns].applymap(str.upper)
     df = df.set_index(id_columns)
+    df = df.loc[target]
+    if ihid:
+        df = df.loc[ihid]
+        if iid:
+            df = df.loc[iid]
     if minimal:
-        return df.index.unique().to_frame().reset_index(drop=True)
+        # return df.index.unique().to_frame().reset_index(drop=True)
+        return df.drop(ok_columns, axis=1)
     return df
 
 
@@ -237,7 +258,7 @@ def _search(bbox, target, ihid, iid, pt, match='contain'):
     if 'contain' in match:
         params.update({'loc':'o'})
 
-    resjs = _request(API_URL, params)
+    resjs = _request(_API_URL, params)
     return resjs
 
 
@@ -259,7 +280,7 @@ def _request(url, params):
     _params = params.copy()
     _params.update({ 'output':'JSON' })
 
-    res = requests.get(API_URL, _params)
+    res = requests.get(_API_URL, _params)
 
     # If response is not a round 200, fail it
     if res.status_code != 200:
@@ -396,7 +417,7 @@ def parse_products(resjs, meta_selectors=None, data_selectors=None,
         as ['product_files'] and ['ODE_notes']['notes'] as ['notes']
     """
 
-    assert meta_select_how in ('keep','remove')
+    assert meta_select_how in ('keep','exclude'), f"Expected 'keep' or 'exclude', got {meta_select_how} instead."
     assert data_select_how in ('any','all'), "Expected to have 'all' or 'any' for 'match_selector'"
 
     selectors_not_found= set()
@@ -422,7 +443,7 @@ def parse_products(resjs, meta_selectors=None, data_selectors=None,
                 assert isinstance(meta_selectors, (list,tuple))
                 selectors_not_found.update(set(filter(lambda f:f not in product, meta_selectors)))
             if (meta_selectors is None
-                or (key in meta_selectors and meta_select_how == 'filter')
+                or (key in meta_selectors and meta_select_how == 'keep')
                 or (key not in meta_selectors and meta_select_how == 'exclude')):
                     meta[key] = value
 

@@ -22,6 +22,10 @@ class Longitude(object):
 
 
 class Bbox(object):
+    # bbox is either None or 
+    # a structure with 'lons' (Longitude) and 'lats' (Latitude) keys (e.g, Dict)
+    # self._bbox = None
+
     def __init__(self, bbox):
         """
         Return a bounding-box representation.
@@ -47,7 +51,10 @@ class Bbox(object):
         elif isinstance(bbox, str):
             vals = parse_string(bbox)
         else:
-            msg_none = "None argument given, expected either 'dict', 'list' or 'string'"
+            msg_none = ("None argument given, expected either 'dict', 'list' or 'string'",
+                        "See this object's 'help' for input format.",
+                        "In the meantime, a string like this will do:",
+                        "'west_lon min_lat east_lon max_lat'.")
             raise Exception(msg_none)
         lons,lats = vals
         self.lons = lons

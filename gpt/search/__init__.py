@@ -2,11 +2,31 @@
 Functions and Classes to handle geo-spatial data search on DBs or REST/APIs
 """
 
+from gpt.helpers import Bbox
+
+# -----------------------------------------
+# Dynamic load module in current directory:
+#
+# DEPRECATED
+#
+import sys
+import pkgutil
+import importlib
+
+pkg = sys.modules[__package__]
+
+_mods = []
+for finder, name, ispkg in pkgutil.iter_modules(pkg.__path__, pkg.__name__+'.'):
+    mod = importlib.import_module(name)
+    _mods.append(mod)
+
+del pkg, finder, name, ispkg, mod
+del importlib, pkgutil, sys
+#
+# -----------------------------------------
+
 def available_apis():
-    _apis = [
-        'ode'
-    ]
-    return _apis
+    return [ m.__name__.split('.')[-1] for m in _mods ]
 
 
 def footprints(bbox, api='ode', db=None, match="intersect",
@@ -35,6 +55,7 @@ def footprints(bbox, api='ode', db=None, match="intersect",
     _bb = bbox if isinstance(bbox, Bbox) else Bbox(bbox)
 
     if api == 'ode':
+        from . import ode
         resdf = ode.search(bbox=_bb, match=match,
                             target=target_body, ihid=mission,
                             iid=instrument, pt=product_type)
