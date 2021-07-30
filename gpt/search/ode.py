@@ -15,9 +15,29 @@ class Search(SearchBase):
     _response = None
     _dataset = None
 
-    def __init__(self, target, ihid, iid, pt):
+    def __init__(self, dataset):
+        target_array = dataset.split('/')
+
+        # From now on, it becomes ODE-biased implementation. For instance, 
+        # it assumes 'dataset' is defined by a '/'-separated size-4 string,
+        # according to ODE: body/ihid/iid/pt.
+        # TODO: generalize that to any vector size (separators can be "/", we can make this a parameter all along)
+        #
+        assert 1 <= len(target_array) <= 4
+
+        body = ihid = iid = pt = None
+
+        if len(target_array) > 1:
+            if len(target_array) >= 2:
+                ihid = target_array[1]
+            if len(target_array) >= 3:
+                iid = target_array[2]
+            if len(target_array) >= 4:
+                pt = target_array[3]
+        body = target_array[0]
+
         self._dataset = {
-            'target': target,
+            'target': body,
             'ihid': ihid,
             'iid': iid,
             'pt': pt
@@ -32,6 +52,9 @@ class Search(SearchBase):
     def __str__(self):
         import json
         return json.dumps(self._response)
+
+    def ready(self):
+        return all(self._dataset.values())
 
     def available_datasets(self, minimal):
         # import re
@@ -75,6 +98,10 @@ class Results(object):
 
     def __len__(self):
         return len(self._products)
+
+    @property
+    def count(self):
+        return len(self)
 
     def show(self, what='unique'):
         if what == 'unique':

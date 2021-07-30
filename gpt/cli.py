@@ -1,9 +1,10 @@
 import click
 
 import gpt.search 
+import gpt.download
 
 
-@click.group(invoke_without_command=True)
+@click.group()
 @click.pass_context
 def cli(ctx):
     """
@@ -16,7 +17,7 @@ def cli(ctx):
 @click.argument('dataset', required=False)
 @click.option('--list', is_flag=True, default=False, help="List the available arguments for api/target")
 @click.option('--bbox', is_flag=False, default=None, help="Bounding-box '[westLon, minLat, eastLon, maxLat]'")
-@click.option('--intersect', is_flag=True, default=True, help="Consider data products intersecting/not the bounding-box")
+@click.option('--intersect/--no-intersect', is_flag=True, default=True, help="Consider data products intersecting/not the bounding-box")
 @click.option('--output', default='output_search.geojson')
 @click.pass_context
 def search(ctx, api:str, dataset:str, list:bool, bbox:str, intersect:bool, output:str):
@@ -40,8 +41,7 @@ def search(ctx, api:str, dataset:str, list:bool, bbox:str, intersect:bool, outpu
     Data products are search per dataset volume, complete specifiction, in the case of ODE
     datasets are defined all the way down to product-type (eg, 'mars/mro/hirise/rdrv11').
     """
-    target = dataset
-    if target is None:
+    if dataset is None:
         if api is None:
             if list:
                 apis = gpt.search.available_apis()
@@ -60,39 +60,19 @@ def search(ctx, api:str, dataset:str, list:bool, bbox:str, intersect:bool, outpu
                 click.echo("Possible targets are 'mars', 'moon', 'mercury', etc.")
                 return False
 
-    target_array = target.split('/')
-
-    # From now on, it becomes ODE-biased implementation. For instance, 
-    # it assumes 'dataset' is defined by a '/'-separated size-4 string,
-    # according to ODE: body/ihid/iid/pt.
-    # TODO: generalize that to any vector size (separators can be "/", we can make this a parameter all along)
-    #
-    assert 1 <= len(target_array) <= 4
-
-    body = ihid = iid = pt = None
-
-    if len(target_array) > 1:
-        if len(target_array) >= 2:
-            ihid = target_array[1]
-        if len(target_array) >= 3:
-            iid = target_array[2]
-        if len(target_array) >= 4:
-            pt = target_array[3]
-    body = target_array[0]
 
     search_init = gpt.search.get_api(api)
-    # ODE has this stateful Search object, needs initialization if dataset name
-    search_api = search_init(body, ihid, iid, pt)
-
-    complete = body and ihid and iid and pt
+    search_api = search_init(dataset)
 
     if list:
         dsets = search_api.available_datasets(minimal=True)
         click.echo(dsets.to_csv(sep=' '))
         return True
 
-    if not complete:
-        click.echo("Use 'list=True' to specify better")
+    if not search_api.ready():
+        click.echo("Dataset not fully defined, use '--list' to specify better")
+        return False
+
     if bbox is None:
         click.echo("Define a bounding-box to search in the dataset. E.g, '[-1,-1,1,1]'")
         return False
@@ -104,6 +84,23 @@ def search(ctx, api:str, dataset:str, list:bool, bbox:str, intersect:bool, outpu
     #
     res = search_api.bbox(bbox, intersect)
     
+    click.echo(f"{res.count} product(s) found.")
+
     res.to_geojson(output)
-    
+
+    return True
+
+
+@cli.command()
+@click.argument('geojson')
+@click.argument('property')
+@click.option('--to-dir', default='./data/', help="Directory to download data to")
+@click.option('--to-property', required=False, default=None, help="Save the path where data products are downloaded")
+@click.option('--to-geojson', required=False, default=None, help="Filename of output GeoJSON with updated properties")
+@click.pass_context
+def download(ctx, geojson, property, to_dir, to_property, to_geojson):
+    """
+    Download files from GeoJSON features' property providing URL paths.
+    """ 
+    gpt.download.from_geojson(geojson, property, to_dir, to_property, to_geojson)
     return True

@@ -41,6 +41,7 @@ Output written to 'output.gjsn'
 ### GeoJSON
 
 List GeoJSON feature properties:
+
 ```bash
 $ gpt geojson 'collection.gjsn' --list-properties
 file_url  (21/42 features)
@@ -55,6 +56,7 @@ Utils to download files.
 #### CLI
 
 Download files from URLs given after `fileurl` in GeoJSON features:
+
 ```bash
 $ gpt download --from-geojson 'products.geojson' --from-field 'fileurl' --to-geojson 'download.gjsn' --to-dir './data/' 
 ...
@@ -64,6 +66,7 @@ Output written to 'download.gjsn'
 ```
 
 Download files from URLs at `fileurl` with a filter at `description`:
+
 ```bash
 $ gpt download --from-geojson 'products.geojson' --from-field 'fileurl' --filter-field 'description' --filter-with 'label'
 42 features excluded.

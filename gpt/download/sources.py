@@ -3,7 +3,6 @@ import json
 from collections import UserDict
 
 from gpt.helpers import Collection
-from gpt.download import download
 
 
 def from_geojson(filename):
@@ -26,6 +25,7 @@ class Sources(Collection):
         Output:
             Collection object with new meta refering to fresh downloaded files
         """
+        from gpt.download import download
         if not path:
             path = '.'
         paths = list(self.deref(path))
@@ -34,7 +34,7 @@ class Sources(Collection):
         filenames = [os.path.join(path, name) for path,name in zip(paths,filenames)]
         assert len(filenames) == len(urls), "List of 'filenames' must match length of 'urls'"
 
-        filenames = download(urls, filenames, make_dirs=make_dirs)
+        filenames = download(urls, filenames, make_dirs=make_dirs, progress_on=True)
 
         return self._add_field(file_column, filenames, inplace=True)
 
