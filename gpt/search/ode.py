@@ -250,7 +250,8 @@ def available_datasets(target='Mars', ihid=None, iid=None, minimal=False):
     return df
 
 
-def search(bbox, target, ihid, iid, pt, match='contain'):
+def search(bbox, dataset, match='contain'):
+    target, ihid, iid, pt = dataset.split('/')
     resjs = _search(bbox, target, ihid, iid, pt, match)
     try:
         out = _get_ps(resjs)

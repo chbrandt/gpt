@@ -1,6 +1,7 @@
 """
 Functions and Classes to handle geo-spatial data search on DBs or REST/APIs
 """
+import logging
 
 from gpt.helpers import Bbox
 
@@ -51,8 +52,7 @@ def get_api(name):
     return api
 
 
-def footprints(bbox, api='ode', db=None, match="intersect",
-               target_body=None, mission=None, instrument=None, product_type=None):
+def bbox(bbox, dataset, intersect=True, api='ode'):
     """
     Search for product/geometries in 'api' or 'db' matching 'bbox'
 
@@ -70,16 +70,8 @@ def footprints(bbox, api='ode', db=None, match="intersect",
     Output:
         Return ~gpt.helpers.Collection with the results
     """
-    assert api or db, "Either 'api' or 'db' should be given. Check ~available_apis()"
+    from . import ode
     assert api in available_apis(), "Expected a value from ~available_apis()"
 
-    from gpt.helpers import Bbox
-    _bb = bbox if isinstance(bbox, Bbox) else Bbox(bbox)
-
-    if api == 'ode':
-        from . import ode
-        resdf = ode.search(bbox=_bb, match=match,
-                            target=target_body, ihid=mission,
-                            iid=instrument, pt=product_type)
-
-    return None
+    match = 'intersect' if intersect else 'contain'
+    return ode.search(bbox=bbox, match=match, dataset=dataset)

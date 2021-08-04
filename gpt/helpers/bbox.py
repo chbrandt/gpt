@@ -1,3 +1,6 @@
+import logging
+from collections import OrderedDict
+
 WORLD = {
     'minlat': -90,
     'maxlat': 90,
@@ -44,8 +47,8 @@ class Bbox(object):
 
         See https://wiki.openstreetmap.org/wiki/Bounding_Box
         """
-        if isinstance(bbox, dict):
-            lons = parse_dict(bbox)
+        if isinstance(bbox, (dict, OrderedDict)):
+            vals = parse_dict(bbox)
         elif isinstance(bbox, (list,tuple)):
             vals = parse_array(bbox)
         elif isinstance(bbox, str):
@@ -83,7 +86,7 @@ def parse_array(arr):
 
 
 def parse_dict(dct):
-    clr_keys = ('westlon','minlat','eastlong','maxlat')
+    clr_keys = ('westlon','minlat','eastlon','maxlat')
     amb_keys = ('xmin','ymin','xmax','ymax')
     if all([k in dct for k in clr_keys]):
         return parse_array([ dct[k] for k in clr_keys ])
