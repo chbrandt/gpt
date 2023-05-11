@@ -16,14 +16,21 @@ The following databases are currently supported:
 List available service APIs:
 
 ```bash
-$ gpt search --list-apis
+$ gpt search --list
 'ode'
+```
+
+List ODE targets:
+
+```bash
+$ gpt search ode --list
+mars, moon, mercury```
 ```
 
 List ODE's available Martian datasets:
 
 ```bash
-$ gpt search ode Mars --list-datasets
+$ gpt search ode Mars --list
 ...
 MRO/CTX/EDR
 MRO/HIRISE/RDRV11
